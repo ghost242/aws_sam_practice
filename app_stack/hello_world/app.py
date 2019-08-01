@@ -1,5 +1,8 @@
 import json
 import os
+import boto3
+
+from urllib.parse import parse_qs
 
 
 # import requests
@@ -27,31 +30,25 @@ def lambda_handler(event, context):
         Return doc: https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
     """
     q_name = ""
-    q_url = ""
     try:
         q_name = os.environ.get('DATAPIPE_QUEUENAME')
-        # queries = parse_qs(event['body'])
-        #
-        # sqs_client = boto3.client('sqs')
-        # print(q_name)
-        # q_url = sqs_client.get_queue_url(QueueName=q_name)
-        # print(q_url)
-        # sqs_client.send_message(
-        #     QueueUrl=q_url,
-        #     MessageBody='hello')
+        queries = parse_qs(event['body'])
+        
+        sqs_client = boto3.client('sqs')
+        sqs_client.send_message(
+            QueueUrl=q_name,
+            MessageBody='hello')
 
         return {
             "statusCode": 200,
             "body": json.dumps({
                 "message": q_name,
-                # "location": ip.text.replace("\n", "")
             }),
         }
     except Exception as e:
         return {
             "statusCode": 503,
             "body": json.dumps({
-                "message": str(e) + q_name + q_url,
-                # "location": ip.text.replace("\n", "")
+                "message": str(e) + q_name,
             }),
         }
