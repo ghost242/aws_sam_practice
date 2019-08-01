@@ -1,0 +1,77 @@
+# Headers
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  AWS
+
+  Sample SAM Template for AWS
+
+
+# Parameters
+
+# Mappings
+
+# Conditions
+
+# Resources
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    CodeUri: app_stack/
+    Runtime: python3.7
+    Timeout: 30
+
+Resources:
+  HelloWorldFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      Handler: hello_world.app.lambda_handler
+      Policies:
+        - SQSPollerPolicy:
+            QueueName: !GetAtt DataPipeQueue.QueueName
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt DataPipeQueue.QueueName
+      Environment:
+        Variables:
+          DATAPIPE_QUEUENAME: !Ref DataPipeQueue
+        HelloWorld:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /hello
+            Method: get
+  DataSenderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: hello_lambda.app.lambda_handler
+      Policies:
+        - SQSPollerPolicy:
+            QueueName: !GetAtt DataPipeQueue.QueueName
+      Events:
+        DataPipeEvent:
+          Type: SQS
+          Properties:
+            Queue: !GetAtt DataPipeQueue.Arn
+            BatchSize: 10
+            Enabled: false
+  DataPipeQueue:
+    Type: AWS::SQS::Queue
+    Properties:
+      QueueName: "DataPipeQueue"
+
+# Outputs
+Outputs:
+  # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
+  # Find out more about other implicit resources you can reference within SAM
+  # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorldApi:
+    Description: "API Gateway endpoint URL for Prod stage for Hello World function"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
+  HelloWorldFunction:
+    Description: "Hello World Lambda Function ARN"
+    Value: !GetAtt HelloWorldFunction.Arn
+  DataSenderFunction:
+    Description: "Data send & receive function ARN"
+    Value: !GetAtt DataSenderFunction.Arn
+  HelloWorldFunctionIamRole:
+    Description: "Implicit IAM Role created for Hello World function"
+    Value: !GetAtt HelloWorldFunctionRole.Arn
