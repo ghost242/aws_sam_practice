@@ -14,7 +14,7 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    CodeUri: app_stack/
+    CodeUri: .
     Runtime: python3.7
     Timeout: 30
 
@@ -22,7 +22,7 @@ Resources:
   HelloWorldFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      Handler: hello_world.app.lambda_handler
+      Handler: app_stack.hello_world.app.lambda_handler
       Policies:
         - SQSPollerPolicy:
             QueueName: !GetAtt DataPipeQueue.QueueName
@@ -30,7 +30,7 @@ Resources:
             QueueName: !GetAtt DataPipeQueue.QueueName
       Environment:
         Variables:
-          DATAPIPE_QUEUENAME: !Ref DataPipeQueue
+          DATAPIPE_QUEUEURL: !Ref DataPipeQueue
       Events:
         HelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
@@ -40,10 +40,15 @@ Resources:
   DataSenderFunction:
     Type: AWS::Serverless::Function
     Properties:
-      Handler: hello_lambda.app.lambda_handler
+      Handler: app_stack.hello_lambda.app.lambda_handler
       Policies:
         - SQSPollerPolicy:
             QueueName: !GetAtt DataPipeQueue.QueueName
+        - S3CrudPolicy:
+            BucketName: !Ref DataStoreS3
+      Environment:
+        Variables:
+          DATASTORE_BUCKETNAME: !Ref DataStoreS3
       Events:
         DataPipeEvent:
           Type: SQS
@@ -51,6 +56,10 @@ Resources:
             Queue: !GetAtt DataPipeQueue.Arn
             BatchSize: 10
             Enabled: false
+  DataStoreS3:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: "sam-practice-data-store-s3"
   DataPipeQueue:
     Type: AWS::SQS::Queue
     Properties:
