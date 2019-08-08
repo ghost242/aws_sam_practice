@@ -32,18 +32,26 @@ Resources:
         Variables:
           DATAPIPE_QUEUEURL: !Ref DataPipeQueue
       Events:
-        HelloWorld:
+        GetHelloWorld:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /hello
             Method: get
+        PostHelloWorld:
+          Type: Api
+          Properties:
+            Path: /hello
+            Method: post
+        HelloWorldLogs:
+          Type: CloudWatchLogs
+          Properties:
+            LogGroupName: !Ref HelloWorldLogsGroup
+            FilterPattern: Error
   DataSenderFunction:
     Type: AWS::Serverless::Function
     Properties:
       Handler: app_stack.hello_lambda.app.lambda_handler
       Policies:
-        - SQSPollerPolicy:
-            QueueName: !GetAtt DataPipeQueue.QueueName
         - S3CrudPolicy:
             BucketName: !Ref DataStoreS3
       Environment:
@@ -55,11 +63,27 @@ Resources:
           Properties:
             Queue: !GetAtt DataPipeQueue.Arn
             BatchSize: 10
-            Enabled: false
+            Enabled: true
+        DataSenderLogs:
+          Type: CloudWatchLogs
+          Properties:
+            LogGroupName: !Ref DataSenderLogsGroup
+            FilterPattern: Error
   DataStoreS3:
     Type: AWS::S3::Bucket
     Properties:
+      AccessControl: "Private"
       BucketName: "sam-practice-data-store-s3"
+  DataStoreS3Policy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref DataStoreS3
+      PolicyDocument:
+        Statement:
+          Effect: Allow
+          Principal: "*"
+          Action: "s3:*"
+          Resource: !Join ["", ["arn:aws:s3:::", !Ref "DataStoreS3", "/*"]]
   DataPipeQueue:
     Type: AWS::SQS::Queue
     Properties:
@@ -75,12 +99,23 @@ Resources:
           Principal: "*"
           Action: "sqs:*"
           Resource: "*"
+  HelloWorldLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
+  DataSenderLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
 
 # Outputs
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
+  HelloWorld:
+    Description: "Hello World Lambda API entrypoint"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
   HelloWorldFunction:
     Description: "Hello World Lambda Function ARN"
     Value: !GetAtt HelloWorldFunction.Arn

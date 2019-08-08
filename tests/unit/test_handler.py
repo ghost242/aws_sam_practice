@@ -1,7 +1,8 @@
 import json
 
-import app
 import pytest
+
+from app_stack import hello_world
 
 
 @pytest.fixture()
@@ -62,10 +63,10 @@ def apigw_event():
 
 
 def test_lambda_handler(apigw_event, mocker):
-    ret = app.lambda_handler(apigw_event, "")
+    ret = hello_world.lambda_handler(apigw_event, "")
     data = json.loads(ret["body"])
 
     assert ret["statusCode"] == 200
     assert "message" in ret["body"]
-    assert data["message"] == "hello world"
+    assert data["message"] == 'Successfully received message!!'
     # assert "location" in data.dict_keys()
