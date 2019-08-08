@@ -1,0 +1,13 @@
+version: 0.2
+
+phases:
+  install:
+    runtime-versions:
+      python: 3.7
+  pre_build:
+    commands:
+      - pip install -r requirements_dev.txt
+      - pip install pytest pytest-cov
+  build:
+    commands:
+      - pytest tests/unit
