@@ -1,3 +1,5 @@
+[![build status](https://codebuild.ap-northeast-2.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiVzYwTHVjbWw1eUdabVVaeGVsSG96WXhiNkUvL01mTFZXTDFmL3hjVDA0N0FnWGdQa3RPdU5ONCs1RFdwL3NKRnNyeExKT0RPOS9ONmFzczFscEdBSUtjPSIsIml2UGFyYW1ldGVyU3BlYyI6Im9ZdEgrMU9uaUU4OFpWankiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)](https://codebuild.ap-northeast-2.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiVzYwTHVjbWw1eUdabVVaeGVsSG96WXhiNkUvL01mTFZXTDFmL3hjVDA0N0FnWGdQa3RPdU5ONCs1RFdwL3NKRnNyeExKT0RPOS9ONmFzczFscEdBSUtjPSIsIml2UGFyYW1ldGVyU3BlYyI6Im9ZdEgrMU9uaUU4OFpWankiLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
+
 # AWS
 
 This is a sample template for AWS - Below is a brief explanation of what we have generated for you:
