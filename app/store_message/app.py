@@ -15,8 +15,7 @@ def lambda_handler(event, context):
             payload = record["body"]
             print(str(payload), type(payload), repr(payload))
 
-            s3_client.put()
-            res = s3_client.upload_file(text,
+            res = s3_client.upload_file(str(payload),
                                         bucket_name,
                                         'test_file.txt')
             print(res)

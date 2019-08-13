@@ -6,12 +6,22 @@ This is a sample template for AWS - Below is a brief explanation of what we have
 
 ```bash
 .
+├── Dockerfile
 ├── README.md                   <-- This instructions file
-├── event.json                  <-- API Gateway Proxy Integration event payload
-├── hello_world                 <-- Source code for a lambda function
+├── app
 │   ├── __init__.py
-│   ├── app.py                  <-- Lambda function code
-│   ├── requirements.txt        <-- Lambda function code
+│   ├── get_message             <-- Source code for a lambda function
+│   │   ├── __init__.py
+│   │   └── app.py
+│   ├── store_message           <-- Source code for a lambda function
+│   │   ├── __init__.py
+│   │   └── app.py
+│   └── work_frequently         <-- Source code for a lambda function
+│       ├── __init__.py
+│       └── app.py
+├── buildspec.yml
+├── event.json                  <-- API Gateway Proxy Integration event payload
+├── requirements.txt
 ├── template.yaml               <-- SAM Template
 └── tests                       <-- Unit tests
     └── unit
@@ -64,7 +74,7 @@ AWS Lambda Python runtime requires a flat folder with all dependencies including
     HelloWorldFunction:
         Type: AWS::Serverless::Function
         Properties:
-            CodeUri: hello_world/
+            CodeUri: 
             ...
 ```
 

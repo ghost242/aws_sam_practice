@@ -11,6 +11,6 @@ phases:
 artifacts:
   type: zip
   files:
-    - app/**
-    - package/**
+    - app
+    - package
     - requirements.txt
