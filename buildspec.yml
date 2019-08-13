@@ -8,9 +8,10 @@ phases:
     commands:
       - pip install -r requirements.txt --target package
       - pip install pytest pytest-cov
+  post_build:
+    commands:
+      - zip -r deploy_pack.zip app package requirements.txt --exclude *__pycache__*
 artifacts:
   type: zip
   files:
-    - app
-    - package
-    - requirements.txt
+    - deploy_pack.zip
