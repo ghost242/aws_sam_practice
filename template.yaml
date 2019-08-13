@@ -19,61 +19,89 @@ Globals:
     Timeout: 30
 
 Resources:
-  HelloWorldFunction:
-    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
-    Properties:
-      Handler: app_stack.hello_world.app.lambda_handler
-      Policies:
-        - SQSPollerPolicy:
-            QueueName: !GetAtt DataPipeQueue.QueueName
-        - SQSSendMessagePolicy:
-            QueueName: !GetAtt DataPipeQueue.QueueName
-      Environment:
-        Variables:
-          DATAPIPE_QUEUEURL: !Ref DataPipeQueue
-      Events:
-        GetHelloWorld:
-          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
-          Properties:
-            Path: /hello
-            Method: get
-        PostHelloWorld:
-          Type: Api
-          Properties:
-            Path: /hello
-            Method: post
-        HelloWorldLogs:
-          Type: CloudWatchLogs
-          Properties:
-            LogGroupName: !Ref HelloWorldLogsGroup
-            FilterPattern: Error
-  DataSenderFunction:
+  GetMessageFunc: # API Gateway를 통해 메시지를 받는 Lambda를 정의하는 영역이다.
     Type: AWS::Serverless::Function
     Properties:
-      Handler: app_stack.hello_lambda.app.lambda_handler
+      # CodeUri 로부터 Python 패키지를 표현하듯이 작성한다. 최종적으로 event와 context를 파라미터로 받는 함수가 Lambda의 실행함수가 되는데, 여기서는 아래와 같다.
+      Handler: app.get_message.app.lambda_handler
+      # 이 Lambda가 갖는 다른 resource에 대한 권한을 기술하는 부분이다. 이 Lambda는 API로부터 값을 받아 SQS로 전달하는 역할만 하므로, SQSSendMessage에 대한 권한만 갖는다.
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt DataPipeQueue.QueueName
+      # 환경변수에 대해 정의하는 영역이다. 이 영역은 Lambda 함수 정의 대쉬보드의 환경변수 영역과 같다.
+      Environment:
+        Variables:
+          # SQS의 URL을 환경변수로 전달하는 지점
+          DATAPIPE_QUEUEURL: !Ref DataPipeQueue
+      # Lambda를 호출하는 event source 들을 정의하는 영역이다.
+      Events:
+        # API Gateway
+        GetMessageAPI:
+          Type: Api
+          Properties:
+            Path: /write
+            Method: get
+        # CloudWatchLog
+        GetMessageLogs:
+          Type: CloudWatchLogs
+          Properties:
+            LogGroupName: !Ref GetMessageLogsGroup
+            FilterPattern: Error
+  StoreMessageFunc:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.store_message.app.lambda_handler
+      # 여기는 SQS로부터 받은 메시지를 S3에 저장하기 위한 권한을 정의하는 영역이다.
       Policies:
         - S3CrudPolicy:
             BucketName: !Ref DataStoreS3
       Environment:
         Variables:
+          # S3의 URL을 환경변수로 전달하는 지점
           DATASTORE_BUCKETNAME: !Ref DataStoreS3
       Events:
+        # 이 Lambda가 SQS를 통해 메시지를 받았을 때 호출됨을 알 수 있다.
         DataPipeEvent:
           Type: SQS
           Properties:
             Queue: !GetAtt DataPipeQueue.Arn
             BatchSize: 10
             Enabled: true
-        DataSenderLogs:
+        StoreMessageLogs:
           Type: CloudWatchLogs
           Properties:
-            LogGroupName: !Ref DataSenderLogsGroup
+            LogGroupName: !Ref StoreMessageLogsGroup
             FilterPattern: Error
+  WorkFrequentlyFunc:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: app.work_frequently.app.lambda_handler
+      Policies:
+        - SQSSendMessagePolicy:
+            QueueName: !GetAtt DataPipeQueue.QueueName
+      # 환경변수에 대해 정의하는 영역이다. 이 영역은 Lambda 함수 정의 대쉬보드의 환경변수 영역과 같다.
+      Environment:
+        Variables:
+          # SQS의 URL을 환경변수로 전달하는 지점
+          DATAPIPE_QUEUEURL: !Ref DataPipeQueue
+      Events:
+        QuartzTiming:
+          Type: Schedule
+          Properties:
+            Schedule: rate(1 minute)
+        WorkFrequentlyLogs:
+          Type: CloudWatchLogs
+          Properties:
+            LogGroupName: !Ref WorkFrequentlyLogsGroup
+            FilterPattern: Error
+
+  # 수신된 메시지를 담아두기 위한 S3 버킷을 정의하는 영역이다. 여기에 대한 설정은 CloudFormation을 따른다.
   DataStoreS3:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: "Private"
       BucketName: "sam-practice-data-store-s3"
+  # 위의 S3에 대한 권한을 정의하는 영역이다.
   DataStoreS3Policy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -84,10 +112,12 @@ Resources:
           Principal: "*"
           Action: "s3:*"
           Resource: !Join ["", ["arn:aws:s3:::", !Ref "DataStoreS3", "/*"]]
+  # 마찬가지로 SQS에 대해 정의하는 영역이다.
   DataPipeQueue:
     Type: AWS::SQS::Queue
     Properties:
       QueueName: "DataPipeQueue"
+  # SQS 권한에 대산 설정
   DataPipeQueuePolicy:
     Type: AWS::SQS::QueuePolicy
     Properties:
@@ -99,29 +129,42 @@ Resources:
           Principal: "*"
           Action: "sqs:*"
           Resource: "*"
-  HelloWorldLogsGroup:
+  # lambda의 log를 기록하기위한 CloudWatchLogsGroup에 대해 정의하는 영역이다. GetMessageFunc와 StoreMessageFunc를 각각 따로 정의했다.
+  GetMessageLogsGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       RetentionInDays: 7
-  DataSenderLogsGroup:
+  StoreMessageLogsGroup:
     Type: AWS::Logs::LogGroup
     Properties:
       RetentionInDays: 7
-
+  WorkFrequentlyLogsGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      RetentionInDays: 7
 # Outputs
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  HelloWorld:
-    Description: "Hello World Lambda API entrypoint"
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  HelloWorldFunction:
-    Description: "Hello World Lambda Function ARN"
-    Value: !GetAtt HelloWorldFunction.Arn
-  DataSenderFunction:
+  MessageStorage:
+    Description: "GetMessageFunc Lambda API entrypoint"
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/write/"
+  GetMessageFunc:
+    Description: "Get message Lambda Function ARN"
+    Value: !GetAtt GetMessageFunc.Arn
+  StoreMessageFunc:
     Description: "Data send & receive function ARN"
-    Value: !GetAtt DataSenderFunction.Arn
-  HelloWorldFunctionIamRole:
-    Description: "Implicit IAM Role created for Hello World function"
-    Value: !GetAtt HelloWorldFunctionRole.Arn
+    Value: !GetAtt StoreMessageFunc.Arn
+  GetMessageFuncIamRole:
+    Description: "Implicit IAM Role created for Get message function"
+    Value: !GetAtt GetMessageFuncRole.Arn
+  StoreMessageFuncIamRole:
+    Description: "Implicit IAM Role created for Store message function"
+    Value: !GetAtt StoreMessageFuncRole.Arn
+  WorkFrequentlyFunc:
+    Description: "Execute in 1 minute term"
+    Value: !GetAtt WorkFrequentlyFunc.Arn
+  WorkFrequentlyFuncIamRole:
+    Description: "Implicit IAM Role created for frequently working function"
+    Value: !GetAtt WorkFrequentlyFuncRole.Arn
