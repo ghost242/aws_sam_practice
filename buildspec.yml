@@ -6,12 +6,12 @@ phases:
       python: 3.7
   pre_build:
     commands:
-      - pip install -r requirements.txt --target package
-      - pip install pytest pytest-cov
+  build:
+    commands:
   post_build:
     commands:
-      - zip -r deploy_pack.zip app package requirements.txt --exclude *__pycache__*
 artifacts:
-  type: zip
+  type: S3
+  name: "aws_sam_practice.zip"
   files:
-    - deploy_pack.zip
+    - app/**/*
